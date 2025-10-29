@@ -1,0 +1,23 @@
+{
+  "name": "Raspberry Pi Pico (C/C++) Dev Container",
+  "build": { "dockerfile": "Dockerfile" },
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-vscode.cpptools",
+        "raspberry-pi.raspberry-pi-pico"
+      ]
+    }
+  },
+
+  "containerEnv": {
+    "PICO_SDK_PATH": "/workspaces/pico-sdk"
+  },
+
+  "postCreateCommand": "if [ ! -d /workspaces/pico-sdk ]; then git clone --recurse-submodules https://github.com/raspberrypi/pico-sdk.git /workspaces/pico-sdk; fi && gcc --version && cmake --version",
+
+  "settings": {
+    "terminal.integrated.defaultProfile.linux": "bash"
+  }
+}
