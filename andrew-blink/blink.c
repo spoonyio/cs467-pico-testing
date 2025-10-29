@@ -55,6 +55,6 @@ int main() {
         }
         
         // pause
-        sleep_ms(1000)
+        sleep_ms(1000);
     }
 }
