@@ -23,3 +23,16 @@ target_link_libraries(pico_test
 )
 
 pico_add_extra_outputs(pico_test)
+
+# display
+add_executable(lcd1602
+    display.c
+)
+
+target_link_libraries(lcd1602
+    pico_stdlib
+    hardware_i2c
+)
+
+pico_add_extra_outputs(lcd1602)
+
