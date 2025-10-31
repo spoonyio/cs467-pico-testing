@@ -5,34 +5,22 @@ if(NOT DEFINED ENV{PICO_SDK_PATH})
 endif()
 include($ENV{PICO_SDK_PATH}/external/pico_sdk_import.cmake)
 
-project(pico_testing C CXX ASM)
-
-# Initialize the SDK (must come after import and before any pico_* commands)
+project(pico-testing C CXX ASM)
 pico_sdk_init()
 
-add_executable(pico_test
+add_executable(pico-testing
+    main.c
     led_array.c
-)
-
-pico_generate_pio_header(pico_test ${CMAKE_CURRENT_LIST_DIR}/ws2812.pio)
-
-target_link_libraries(pico_test
-    pico_stdlib
-    hardware_pio
-    hardware_clocks
-)
-
-pico_add_extra_outputs(pico_test)
-
-# display
-add_executable(lcd1602
     display.c
 )
 
-target_link_libraries(lcd1602
+target_link_libraries(pico-testing
     pico_stdlib
+    hardware_pio
+    hardware_clocks
     hardware_i2c
 )
 
-pico_add_extra_outputs(lcd1602)
+pico_generate_pio_header(pico-testing ${CMAKE_CURRENT_LIST_DIR}/ws2812.pio)
 
+pico_add_extra_outputs(pico-testing)
