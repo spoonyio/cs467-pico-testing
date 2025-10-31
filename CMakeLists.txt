@@ -5,18 +5,18 @@ if(NOT DEFINED ENV{PICO_SDK_PATH})
 endif()
 include($ENV{PICO_SDK_PATH}/external/pico_sdk_import.cmake)
 
-project(andrew_blink C CXX ASM)
+project(pico_testing C CXX ASM)
 
 # Initialize the SDK (must come after import and before any pico_* commands)
 pico_sdk_init()
 
-add_executable(andrew-blink
+add_executable(pico-testing
     blink.c
 )
 
-target_link_libraries(andrew-blink pico_stdlib)
+target_link_libraries(pico-testing pico_stdlib)
 
-pico_add_extra_outputs(andrew-blink)
+pico_add_extra_outputs(pico-testing)
 
 add_executable(ws2812
     ws2812.c
