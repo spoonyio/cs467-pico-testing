@@ -10,24 +10,16 @@ project(pico_testing C CXX ASM)
 # Initialize the SDK (must come after import and before any pico_* commands)
 pico_sdk_init()
 
-add_executable(pico-testing
-    blink.c
+add_executable(pico_test
+    led_array.c
 )
 
-target_link_libraries(pico-testing pico_stdlib)
+pico_generate_pio_header(pico_test ${CMAKE_CURRENT_LIST_DIR}/ws2812.pio)
 
-pico_add_extra_outputs(pico-testing)
-
-add_executable(ws2812
-    ws2812.c
-)
-
-pico_generate_pio_header(ws2812 ${CMAKE_CURRENT_LIST_DIR}/ws2812.pio)
-
-target_link_libraries(ws2812
+target_link_libraries(pico_test
     pico_stdlib
     hardware_pio
     hardware_clocks
 )
 
-pico_add_extra_outputs(ws2812)
+pico_add_extra_outputs(pico_test)
