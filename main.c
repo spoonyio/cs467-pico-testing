@@ -1,42 +1,69 @@
+/*
+File: main.c (TEMPORARY)
+Description:
+    This version of main.c simply tests the functionality of the sensor module
+    getting readings and sending them to the lcd display and led strip
+    for visualization.
+*/
+
+#include <stdio.h>
+#include <math.h>
 #include "pico/stdlib.h"
 #include "hardware/i2c.h"
-#include "led_array.h"
+
 #include "display.h"
+#include "sensor.h"
+#include "led_array.h"
 
-#define I2C_PORT i2c0
-#define I2C_SDA  4
-#define I2C_SCL  5
-#define LCD_ADDR 0x27
+#ifndef LCD_I2C_ADDR
+#define LCD_I2C_ADDR 0x27
+#endif
 
-int main() {
+static inline float clamp01(float x) {
+    if (x < 0.f)   return 0.f;
+    if (x > 100.f) return 100.f;
+    return x;
+}
+
+int main(void) {
     stdio_init_all();
+    sleep_ms(200);
 
-    // LCD
-    display_init(i2c0, 4, 5, 0x27);
-    display_set_cursor(0, 0);
-    display_print("Hello World!");
-    display_set_cursor(0, 1);
-    display_print("CS 467 Capstone");
+    i2c_init(I2C_PORT, I2C_FREQ);
+    gpio_set_function(I2C_SDA_PIN, GPIO_FUNC_I2C);
+    gpio_set_function(I2C_SCL_PIN, GPIO_FUNC_I2C);
+    gpio_pull_up(I2C_SDA_PIN);
+    gpio_pull_up(I2C_SCL_PIN);
 
-    // LEDs
+    display_init(I2C_PORT, I2C_SDA_PIN, I2C_SCL_PIN, LCD_I2C_ADDR);
+    dht_init();
+
     led_array_init();
-    led_array_show_loading(2000);
+    led_array_show_loading(1500);
+
+    display_clear();
+    display_set_cursor(0, 0);
+    display_print("Humidity");
+
+    char line[21];
+    dht_reading r;
+
     while (true) {
-        float tests[] = {0, 5, 12.5, 25, 37.5, 50, 62.5, 75, 87.5, 100};
-        int n = sizeof(tests) / sizeof(tests[0]);
+        read_from_dht(&r);
 
-        for (int pass = 0; pass < 2; ++pass) {
-            for (int i = 0; i < n; ++i) {
-                float h = tests[i];
-                uint8_t leds_on = humidity_to_leds(h);
-                led_array_set(leds_on);
-                sleep_ms(400);
-            }
-        }
-        for (int i = 2; i <= 8; i *= 2) {
-            led_array_show_error(i, 2000);
-            led_array_show_loading(2000);
-        }
+        float rh = clamp01(r.humidity);
+
+        // Update LEDs based on humidity
+        humidity_to_leds(rh);
+
+        // Update LCD based on humidity
+        display_clear();
+        display_set_cursor(0, 0);
+        snprintf(line, sizeof(line), "Humidity: %.2f%%", rh);
+        display_print(line);
+
+        // Temperature could be second line of LCD
+
+        sleep_ms(500);
     }
-
 }

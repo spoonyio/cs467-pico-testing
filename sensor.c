@@ -99,30 +99,30 @@ void read_from_dht(dht_reading *result) {
     result->humidity = (raw_humidity / 1048576.0f) * 100.0f;   // 2^20 = 1048576
 }
 
-int main() {
-    // Initialize stdio, then wait for sensor to connect to USB
-    stdio_init_all();
-    sleep_ms(5000);
+// int main() {
+//     // Initialize stdio, then wait for sensor to connect to USB
+//     stdio_init_all();
+//     sleep_ms(5000);
 
-    // Initialize DHT20 sensor
-    int dht_init_status = dht_init();
-    if (dht_init_status == 0) {
-        printf("The sensor did not initialize successfully. Please restart.\n");
-        return 1;
-    }
-    hard_assert(dht_init_status == 1);
-    printf("DHT20 sensor successfully initialized.\n");
+//     // Initialize DHT20 sensor
+//     int dht_init_status = dht_init();
+//     if (dht_init_status == 0) {
+//         printf("The sensor did not initialize successfully. Please restart.\n");
+//         return 1;
+//     }
+//     hard_assert(dht_init_status == 1);
+//     printf("DHT20 sensor successfully initialized.\n");
 
-    // Start data read loop
-    printf("Starting measurements.\n");
-    while (true) {
-        // Read after successful DHT initialization, print status while reading
-        // & processing data. Adapted from the DHT example code.
-        printf("\n------------------------------------------------------\n");
-        read_from_dht(sensor_measurement_ptr);
-        printf("Humidity: %.0f%%\n", sensor_measurement.humidity);
-        sleep_ms(2000);
-    }
+//     // Start data read loop
+//     printf("Starting measurements.\n");
+//     while (true) {
+//         // Read after successful DHT initialization, print status while reading
+//         // & processing data. Adapted from the DHT example code.
+//         printf("\n------------------------------------------------------\n");
+//         read_from_dht(sensor_measurement_ptr);
+//         printf("Humidity: %.0f%%\n", sensor_measurement.humidity);
+//         sleep_ms(2000);
+//     }
 
-    return 0;
-}
+//     return 0;
+// }
