@@ -11,3 +11,5 @@
    - plug in pico
    - pico should appear as RPI-RP2
    - drag and drop `.uf2` into it
+
+_Note: Ignore the folder `bus_scan_test`. It's an independent test from the pico sdk. If you'd like to compile it to test on your pico just do the instructions above inside of the folder._
