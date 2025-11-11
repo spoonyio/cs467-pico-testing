@@ -24,13 +24,11 @@ Requires the following modules:
 Wiring configuration
 ** WS2812 RGB 8 LED Strip **
 GPIO 2 (pin 4) -> DIN (data in) on LED strip
-3.3V (pin 36)  -> Power rail (+)  -> VCC on LED strip
-GND  (pin 38)  -> Ground rail (-) -> GND on LED strip
+3.3V (pin 36)  -> VCC on LED strip
+GND  (pin 38)  -> GND on LED strip
 */
 
-#include <stdio.h>
-#include <stdint.h>
-#include <stdbool.h>
+#include "led_array.h"
 #include "pico/stdlib.h"
 #include "hardware/pio.h"
 #include "hardware/clocks.h"
@@ -39,9 +37,9 @@ GND  (pin 38)  -> Ground rail (-) -> GND on LED strip
 #define LED_PIN    2
 #define LED_COUNT  8
 
-static PIO pio = pio0;
-static int sm = -1;
-static uint32_t led_buf[LED_COUNT];
+static PIO pio = pio0;      // PIO block used to drive LEDs
+static int sm = -1;         // State machine index for LED control
+static uint32_t led_buf[LED_COUNT]; // Buffer holding LED color data
 
 // Pack RGB into GRB order
 static inline uint32_t pack_grb(uint8_t r, uint8_t g, uint8_t b) {
@@ -49,6 +47,12 @@ static inline uint32_t pack_grb(uint8_t r, uint8_t g, uint8_t b) {
         ((uint32_t) (r) << 8) |
         ((uint32_t) (g) << 16) |
         (uint32_t) (b);
+}
+
+// Writes color into memory buffer
+static void hw_set_pixel(uint8_t i, uint8_t r, uint8_t g, uint8_t b) {
+    if (i < LED_COUNT)
+        led_buf[i] = pack_grb(r, g, b);
 }
 
 // Send colors from memory buffer to LED strip
@@ -65,18 +69,21 @@ static void hw_clear(void) {
     hw_show();
 }
 
-// Writes color into memory buffer
-static void hw_set_pixel(uint8_t i, uint8_t r, uint8_t g, uint8_t b) {
-    if (i < LED_COUNT)
-        led_buf[i] = pack_grb(r, g, b);
-}
-
-// Load ws2812 control program to PIO, claim unused state machine,
-// set timing to 800 kHz (required for ws2812 LEDs)
 bool led_array_init(void) {
+    // Load PIO program
     uint offset = pio_add_program(pio, &ws2812_program);
-    sm = pio_claim_unused_sm(pio, true);
+    if (offset == (uint)-1) {
+        return false;
+    }
+    // Claim unused state machine
+    sm = pio_claim_unused_sm(pio, false);
+    if (sm < 0) {
+        return false;
+    }
+    // Initialize WS2812 driver at 800 kHz
     ws2812_program_init(pio, sm, offset, LED_PIN, 800000, false);
+
+    //  Clear all LEDs to start
     hw_clear();
     return true;
 }
@@ -96,42 +103,36 @@ uint8_t humidity_to_leds(float h) {
     return n;
 }
 
-// Sets lit LEDs to blue
-static void set_color(uint8_t idx, uint8_t lit, uint8_t *r, uint8_t *g, uint8_t *b) {
-    *r = 0;
-    *g = 0;
-    *b = 255;
-}
-
 // Turn on given number of LEDs and turn off rest
-void led_array_set(uint8_t leds_on) {
+static void led_array_set(uint8_t leds_on) {
     if (leds_on > LED_COUNT)
         leds_on = LED_COUNT;
     for (uint8_t i = 0; i < LED_COUNT; i++) {
         if (i < leds_on) {
-            // Pick and set color if LED supposed to be on
-            uint8_t r, g, b;
-            set_color(i, leds_on, &r, &g, &b);
-            hw_set_pixel(i, r, g, b);
+            hw_set_pixel(i, 0, 0, 255); // on
         }
         else {
-            // Turn LED off
-            hw_set_pixel(i, 0, 0, 0);
+            hw_set_pixel(i, 0, 0, 0);   // off
         }
     }
     hw_show();
 }
 
 // Loading visualization
-void led_array_show_loading(uint32_t ms_total) {
+void led_show_loading(uint32_t ms_total) {
 
     uint32_t start_time = to_ms_since_boot(get_absolute_time());
 
+    // Run visualization until total duration elapsed
     while (to_ms_since_boot(get_absolute_time()) - start_time < ms_total) {
+
+        // Compute current position of moving LED
         uint32_t elapsed = to_ms_since_boot(get_absolute_time()) / 60;
         int position = elapsed % (LED_COUNT * 2 - 2);
         if (position >= LED_COUNT)
             position = (LED_COUNT * 2 - 2) - position;
+
+        // Clear strip, light a yellow LED, update strip
         for (uint8_t i = 0; i < LED_COUNT; i++)
             hw_set_pixel(i, 0, 0, 0);
         hw_set_pixel(position, 255, 255, 0);
@@ -141,7 +142,7 @@ void led_array_show_loading(uint32_t ms_total) {
 }
 
 // Error visualization
-void led_array_show_error(uint8_t code, uint32_t ms_total) {
+void led_show_error(uint8_t code, uint32_t ms_total) {
 
     uint32_t start_time = to_ms_since_boot(get_absolute_time());
 
