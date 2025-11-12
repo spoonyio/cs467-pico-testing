@@ -6,18 +6,22 @@ Date: 11/09/25
 Description:
     Provides initialization & control functionality for the LCD1602 16x2 character
     display connected to the Raspberry Pi Pico.
+
     Portions of low-level LCD command sequencing and I2C write patterns were adapted
     from the official Raspberry Pi Pico SDK LCD1602 I2C example and is licensed as
     follows:
     Copyright (c) 2020 Raspberry Pi (Trading) Ltd.
     SPDX-License-Identifier: BSD-3-Clause
     Source: https://github.com/raspberrypi/pico-examples/tree/master/i2c/lcd_1602_i2c
+
 Responsibilities:
 - Initialize and configure the LCD1602 over I2C
 - Clear the display and position the cursor
 - Print text strings to the LCD
+
 Requires the following modules:
 - display.h: for interface definitions
+
 Wiring configuration
 ** LCD1602 Display **
 GPIO 6 (pin 9)  -> SDA on LCD1602
@@ -26,6 +30,7 @@ GPIO 7 (pin 10) -> SCL on LCD1602
 GND (pin 38)    -> GND on LCD1602
 */
 
+#include <stdio.h>
 #include "pico/stdlib.h"
 #include "hardware/i2c.h"
 #include "display.h"
@@ -99,16 +104,27 @@ static void lcd_send_byte(uint8_t val, uint8_t mode) {
     lcd_toggle_enable(low);
 }
 
-void display_init(i2c_inst_t *i2c, uint sda, uint scl, uint8_t addr) {
-    // Store I2C instance and LCD address
-    s_i2c = i2c;
-    s_addr = addr;
+bool display_init(i2c_inst_t *i2c, uint sda, uint scl, uint8_t addr) {
+
+    i2c_init(i2c, 100000);  // Enable I2C at 100 kHz
 
     // Configure SDA and SCL pins for I2C
     gpio_set_function(sda, GPIO_FUNC_I2C);
     gpio_set_function(scl, GPIO_FUNC_I2C);
     gpio_pull_up(sda);
     gpio_pull_up(scl);
+
+    // Store I2C instance and LCD address
+    s_i2c = i2c;
+    s_addr = addr;
+
+    // Probe the LCD by sending a dummy byte
+    uint8_t probe = 0x00;
+    int result = i2c_write_blocking(i2c, addr, &probe, 1, false);
+    if (result < 0) {
+        printf("LCD not responding at address 0x%02X\n", addr);
+        return false;
+    }
 
     // Initialize LCD into 4-bit mode
     lcd_send_byte(0x03, 0);
@@ -122,6 +138,8 @@ void display_init(i2c_inst_t *i2c, uint sda, uint scl, uint8_t addr) {
     lcd_send_byte(LCD_DISPLAYCONTROL | LCD_DISPLAYON, 0);
     lcd_send_byte(LCD_CLEARDISPLAY, 0);
     sleep_ms(2);  // Allow LCD time to finish clear
+
+    return true;
 }
 
 void display_clear(void){

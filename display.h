@@ -22,8 +22,9 @@ Description: Provides the public interface for controlling the LCD1602
  * @param sda   GPIO pin of SDA
  * @param scl   GPIO pin of SCL
  * @param addr  I2C address of the LCD1602
+ * @return      True if initialization succeeds, false otherwise
  */
-void display_init(i2c_inst_t *i2c, uint sda, uint scl, uint8_t addr);
+bool display_init(i2c_inst_t *i2c, uint sda, uint scl, uint8_t addr);
 
 /**
  * @brief Clear the LCD display and reset the cursor to home position
