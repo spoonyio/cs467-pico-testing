@@ -1,4 +1,6 @@
-# cs467-pico-testing
+# Microcontroller Home Humidity Sensor (Test)
+
+Current version [11/12/2025]: Updated to Code Review #2 progress. Small modifications made in main.c and sensor.c that are divergent from teammates in order to make everything work together, those changes will be noted in the code reviews in the main repo.
 
 1. Open codespaces, type:
    - `rm -rf build`
