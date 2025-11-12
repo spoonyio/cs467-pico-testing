@@ -1,69 +1,97 @@
 /*
-File: main.c (TEMPORARY)
-Description:
-    This version of main.c simply tests the functionality of the sensor module
-    getting readings and sending them to the lcd display and led strip
-    for visualization.
+File: main.c
+Language: C
+Author: Trevor Carlyle
+Date: 10/29/25
+Last Updated: 11/9/25
+Description: Entry point for the Humidity Sensor project using Raspberry Pi Pico.
+
+Responsibilities:
+- Initialize hardware and subsystems (sensor, display, LED array)
+- Periodically read humidity from the sensor
+- Update the LED array and display with the current humidity
+- Implements error handling
+
+Assumes the following modules exist:
+- sensor.c / sensor.h: for reading humidity values
+- display.c / display.h: for updating the screen display
+- led_array.c / led_array.h: for controlling the 8-stage LED array
 */
 
+// Include standard libraries
 #include <stdio.h>
-#include <math.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <stdbool.h>
 #include "pico/stdlib.h"
-#include "hardware/i2c.h"
 
-#include "display.h"
-#include "sensor.h"
-#include "led_array.h"
+// Include project files
+#include "sensor.h"     // Sensor interface (sensor.c/.h)
+#include "display.h"    // Display interface (display.c/.h)
+#include "led_array.h"  // LED array interface (led_array.c/.h)
 
-#ifndef LCD_I2C_ADDR
-#define LCD_I2C_ADDR 0x27
-#endif
+// Constants
+// Checks every 2 seconds, can be adjusted as needed.
+#define HUMIDITY_CHECK_INTERVAL_MS 2000
 
-static inline float clamp01(float x) {
-    if (x < 0.f)   return 0.f;
-    if (x > 100.f) return 100.f;
-    return x;
-}
+int main() {
+    stdio_init_all(); // Initialize stdio
 
-int main(void) {
-    stdio_init_all();
-    sleep_ms(200);
+    printf("Raspberry Pi Humidity Sensor: Initializing hardware...\n");
 
-    i2c_init(I2C_PORT, I2C_FREQ);
-    gpio_set_function(I2C_SDA_PIN, GPIO_FUNC_I2C);
-    gpio_set_function(I2C_SCL_PIN, GPIO_FUNC_I2C);
-    gpio_pull_up(I2C_SDA_PIN);
-    gpio_pull_up(I2C_SCL_PIN);
-
-    display_init(I2C_PORT, I2C_SDA_PIN, I2C_SCL_PIN, LCD_I2C_ADDR);
-    dht_init();
-
-    led_array_init();
-    led_array_show_loading(1500);
-
-    display_clear();
-    display_set_cursor(0, 0);
-    display_print("Humidity");
-
-    char line[21];
-    dht_reading r;
-
-    while (true) {
-        read_from_dht(&r);
-
-        float rh = clamp01(r.humidity);
-
-        // Update LEDs based on humidity
-        humidity_to_leds(rh);
-
-        // Update LCD based on humidity
-        display_clear();
-        display_set_cursor(0, 0);
-        snprintf(line, sizeof(line), "Humidity: %.2f%%", rh);
-        display_print(line);
-
-        // Temperature could be second line of LCD
-
-        sleep_ms(500);
+    // Initialize the DHT20 humidity sensor (sensor.c/.h)
+    if (!dht_init()) {
+        printf("ERROR: Failed to initialize humidity sensor!\n");
+        // Show error pattern on LED array (led_array.c/.h)
+        led_array_show_error(2, 2000); // Show error code 2 for 2 seconds
+        return 1;
     }
+  
+    // Initialize the display (display.c/.h)
+    // Uses I2C0, SDA=6, SCL=7, address=0x27
+    // Can't use error messages here because display_init currently returns void
+    display_init(i2c0, 4, 5, 0x27);
+  
+    // Initialize the LED array (led_array.c/.h)
+    if (!led_array_init()) {
+        printf("ERROR: Failed to initialize LED array!\n");
+        // Show error pattern on LED array (led_array.c/.h)
+        led_array_show_error(3, 2000); // Show error code 3 for 2 seconds
+        return 1;
+    }
+
+    printf("Initialization complete. Entering main loop.\n");
+
+    // Main loop
+    while (true) {
+        // Structure to hold sensor readings (sensor.c/.h)
+        dht_reading reading;
+        // Read humidity and temperature from DHT20 (sensor.c/.h)
+        read_from_dht(&reading);
+        // Print humidity and temperature to serial output
+        printf("Humidity: %.1f%%, Temperature: %.1fC (%.1fF)\n",
+               reading.humidity, reading.temp_celsius,
+               (reading.temp_celsius * 9 / 5) + 32);
+      
+        // Update the LCD display (display.c/.h)
+        display_clear(); // Clear previous display
+        display_set_cursor(0, 0); // Go to the top line of display
+        char line1[17]; // Declare an array line1
+        // Format a string with the current humidity value and stores it in line1
+        snprintf(line1, sizeof(line1), "Humidity: %.1f%%", reading.humidity);
+        // Use display_print from (display.c/.h)
+        display_print(line1);
+
+        // Update the LED array (led_array.c/.h)
+        // Map humidity % to number of LEDs to light up
+        // uint8_t leds_on = humidity_to_leds(reading.humidity);
+        // led_array_set(leds_on);
+        humidity_to_leds(reading.humidity);
+
+        // Wait before next check
+        sleep_ms(HUMIDITY_CHECK_INTERVAL_MS);
+    }
+
+    // Should never reach here
+    return 0;
 }
